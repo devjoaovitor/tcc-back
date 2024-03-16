@@ -9,7 +9,12 @@ const PORT = process.env.PORT || 3000;
 
 const db = require('./db');
 
-app.use(cors());
+app.use(cors({
+    origin: 'https://tcc-front-two.vercel.app', 
+    methods: ['GET', 'POST'], 
+    allowedHeaders: ['Content-Type', 'Authorization'] 
+  }));
+
 app.use(bodyParser.json());
 
 app.post('/api/auth/login', async (req, res) => {
