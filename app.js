@@ -9,64 +9,59 @@ const PORT = process.env.PORT || 3000;
 
 const db = require('./db');
 
-app.use(cors({
-    origin: 'https://tcc-front-two.vercel.app', 
-    methods: ['GET', 'POST'], 
-    allowedHeaders: ['Content-Type', 'Authorization'] 
-  }));
+// Função para determinar se uma origem deve ser permitida
+const allowlist = ['https://tcc-front-two.vercel.app'];
+
+const corsOptionsDelegate = function (req, callback) {
+  let corsOptions;
+  if (allowlist.indexOf(req.header('Origin')) !== -1) {
+    // Permitir origem solicitada pela requisição
+    corsOptions = { origin: true };
+  } else {
+    // Bloquear todas as outras origens
+    corsOptions = { origin: false };
+  }
+  callback(null, corsOptions);
+};
+
+// Aplicar a função de opções de CORS
+app.use(cors(corsOptionsDelegate));
 
 app.use(bodyParser.json());
 
 app.post('/api/auth/login', async (req, res) => {
-    const { email, senha } = req.body;
+  const { email, senha } = req.body;
 
-    console.log(`Tentativa de login para o email: ${email}`);
+  console.log(`Tentativa de login para o email: ${email}`);
 
-    if (!email || !senha) {
-        return res.status(400).json({ error: 'É necessário fornecer email e senha' });
+  if (!email || !senha) {
+    return res.status(400).json({ error: 'É necessário fornecer email e senha' });
+  }
+
+  try {
+    const queryResult = await db.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+
+    if (queryResult.rows.length === 0) {
+      console.log('Usuário não encontrado no banco de dados.');
+      return res.status(401).json({ error: 'Usuário não encontrado ou senha incorreta' });
     }
 
-    try {
-        const queryResult = await db.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-        
-        if (queryResult.rows.length === 0) {
-            console.log('Usuário não encontrado no banco de dados.'); 
-            return res.status(401).json({ error: 'Usuário não encontrado ou senha incorreta' });
-        }
+    const usuario = queryResult.rows[0];
 
-        const usuario = queryResult.rows[0];
-
-        if (senha !== usuario.senha) {
-            console.log('Senha fornecida não corresponde.'); 
-            return res.status(401).json({ error: 'Usuário não encontrado ou senha incorreta' });
-        }
-
-        delete usuario.senha; 
-        console.log(`Usuário ${email} autenticado com sucesso.`); 
-        res.json({ usuario });
-    } catch (err) {
-        console.error('Erro ao tentar fazer login', err);
-        res.status(500).json({ error: 'Erro interno ao tentar fazer login' });
+    if (senha !== usuario.senha) {
+      console.log('Senha fornecida não corresponde.');
+      return res.status(401).json({ error: 'Usuário não encontrado ou senha incorreta' });
     }
-});
 
-app.get('/api/users', async (req, res) => {
-    try {
-        const queryResult = await db.query('SELECT * FROM usuarios');
-        
-        if (queryResult.rows.length === 0) {
-            console.log('Nenhum usuário encontrado no banco de dados.'); 
-            return res.status(404).json({ error: 'Nenhum usuário cadastrado' });
-        }
-
-        console.log('Usuários listados com sucesso.'); 
-        res.json({ usuarios: queryResult.rows });
-    } catch (err) {
-        console.error('Erro ao tentar listar usuários', err);
-        res.status(500).json({ error: 'Erro interno ao tentar listar usuários' });
-    }
+    delete usuario.senha;
+    console.log(`Usuário ${email} autenticado com sucesso.`);
+    res.json({ usuario });
+  } catch (err) {
+    console.error('Erro ao tentar fazer login', err);
+    res.status(500).json({ error: 'Erro interno ao tentar fazer login' });
+  }
 });
 
 app.listen(PORT, () => {
-    console.log(`Servidor está rodando na porta ${PORT}`);
+  console.log(`Servidor está rodando na porta ${PORT}`);
 });
