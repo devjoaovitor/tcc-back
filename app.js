@@ -45,6 +45,23 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+app.get('/api/users', async (req, res) => {
+    try {
+        const queryResult = await db.query('SELECT * FROM usuarios');
+        
+        if (queryResult.rows.length === 0) {
+            console.log('Nenhum usuário encontrado no banco de dados.'); 
+            return res.status(404).json({ error: 'Nenhum usuário cadastrado' });
+        }
+
+        console.log('Usuários listados com sucesso.'); 
+        res.json({ usuarios: queryResult.rows });
+    } catch (err) {
+        console.error('Erro ao tentar listar usuários', err);
+        res.status(500).json({ error: 'Erro interno ao tentar listar usuários' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Servidor está rodando na porta ${PORT}`);
 });
