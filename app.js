@@ -23,8 +23,6 @@ app.use(bodyParser.json());
 app.post("/api/auth/login", async (req, res) => {
   const { email, senha } = req.body;
 
-  console.log(`Tentativa de login para o email: ${email}`);
-
   if (!email || !senha) {
     return res
       .status(400)
@@ -62,18 +60,70 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-app.get("/usuarios", async (req, res) => {
-  try {
-    const queryResult = await db.query("SELECT * FROM usuarios");
-    // Alterado para retornar todos os usuários encontrados
-    const usuarios = queryResult.rows;
 
-    res.json({ usuarios }); // Note que agora é 'usuarios', indicando que pode ser mais de um.
-  } catch (err) {
-    console.error("Erro ao pegar usuários", err);
-    res.status(500).json({ error: "Erro interno ao pegar usuários" });
+app.post('/bebidas', async (req, res) => {
+  const { quantidadeBebida, teorAlcoolico, valorUnitario, descricao, tipoBebida, nomeBebida } = req.body;
+
+  try {
+    const query = 'INSERT INTO bebidas (quantidadebebida, teoralcoolico, valorunitario, descricao, tipobebida, nomebebida) VALUES ($1, $2, $3, $4, $5, $6)';
+    const values = [quantidadeBebida, teorAlcoolico, valorUnitario, descricao, tipoBebida, nomeBebida];
+    await db.query(query, values);
+  
+    res.status(200).json({ message: 'Bebida registrada com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao registrar a bebida:', error);
+    res.status(500).json({ error: 'Erro ao registrar a bebida. Por favor, tente novamente mais tarde.' });
   }
 });
+
+app.put('/bebidas/:id', async (req, res) => {
+  const { quantidadeBebida, teorAlcoolico, valorUnitario, descricao, tipoBebida, nomeBebida } = req.body;
+  const bebidaId = req.params.id;
+
+  try {
+    const query = `
+      UPDATE bebidas
+      SET quantidadebebida = $1, teoralcoolico = $2, valorunitario = $3, descricao = $4, tipobebida = $5, nomebebida = $6
+      WHERE id = $7
+    `;
+    const values = [quantidadeBebida, teorAlcoolico, valorUnitario, descricao, tipoBebida, nomeBebida, bebidaId];
+    await db.query(query, values);
+
+    res.status(200).json({ message: 'Bebida atualizada com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao atualizar a bebida:', error);
+    res.status(500).json({ error: 'Erro ao atualizar a bebida.' });
+  }
+});
+
+app.get('/bebidas/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = 'SELECT * FROM bebidas WHERE id = $1';
+    const result = await db.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'Bebida não encontrada.' });
+    } else {
+      res.status(200).json(result.rows[0]);
+    }
+  } catch (error) {
+    console.error('Erro ao obter bebida:', error);
+    res.status(500).json({ error: 'Erro ao obter bebida.' });
+  }
+});
+
+app.get('/bebidas', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM bebidas');
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Erro ao obter bebidas:', error);
+    res.status(500).json({ error: 'Erro ao obter bebidas.' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Servidor está rodando na porta ${PORT}`);
