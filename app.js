@@ -3,6 +3,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
+const PDFDocument = require('pdfkit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -121,6 +122,33 @@ app.get('/bebidas', async (req, res) => {
   } catch (error) {
     console.error('Erro ao obter bebidas:', error);
     res.status(500).json({ error: 'Erro ao obter bebidas.' });
+  }
+});
+
+app.get('/bebida/relatorio', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM bebidas');
+    const bebidas = result.rows;
+
+    const doc = new PDFDocument();
+    const stream = doc.pipe(fs.createWriteStream('relatorio_bebidas.pdf'));
+
+    doc.fontSize(14).text('Relatório de Bebidas\n\n');
+    bebidas.forEach((bebida, index) => {
+      doc.fontSize(12).text(`Bebida ${index + 1}:`);
+      doc.fontSize(10).text(`Nome: ${bebida.nomebebida}`);
+      doc.fontSize(10).text(`Quantidade: ${bebida.quantidadebebida}`);
+      doc.fontSize(10).text(`Descrição: ${bebida.descricao}\n\n`);
+    });
+
+    doc.end();
+
+    stream.on('finish', () => {
+      res.download('relatorio_bebidas.pdf');
+    });
+  } catch (error) {
+    console.error('Erro ao gerar relatório de bebidas:', error);
+    res.status(500).json({ error: 'Erro ao gerar relatório de bebidas.' });
   }
 });
 
